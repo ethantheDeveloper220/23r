@@ -6,7 +6,12 @@ const gameHTML = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WPM Racing League</title>
     <style>
-        /* Previous styles remain the same */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
         .league-info {
             background-color: #6f42c1;
             color: white;
@@ -63,10 +68,145 @@ const gameHTML = `<!DOCTYPE html>
 
         .shop-item button {
             background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
             font-size: 0.9em;
         }
 
-        /* Include all previous styles here */
+        .game-text {
+            font-size: 1.2em;
+            line-height: 1.5;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            min-height: 60px;
+        }
+
+        #user-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 1.1em;
+            border: 2px solid #ced4da;
+            border-radius: 5px;
+            resize: none;
+            height: 100px;
+        }
+
+        #user-input:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin: 0 5px;
+        }
+
+        .race-track {
+            height: 100px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .car {
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            transition: left 0.3s linear;
+        }
+
+        .player-car {
+            background-color: #007bff;
+            bottom: 10px;
+            left: 0;
+        }
+
+        .bot-car {
+            background-color: #dc3545;
+            top: 10px;
+            left: 0;
+        }
+
+        .minimap {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .minimap-car {
+            width: 10px;
+            height: 10px;
+            position: absolute;
+            top: 5px;
+            transition: left 0.3s linear;
+        }
+
+        .minimap-player {
+            background-color: #007bff;
+            left: 0;
+        }
+
+        .minimap-bot {
+            background-color: #dc3545;
+            left: 0;
+        }
+
+        .bot-info {
+            text-align: center;
+            margin: 10px 0;
+            color: #6c757d;
+        }
+
+        #start-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 1.1em;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+
+        #start-btn.disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .race-log {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 5px;
+            border-bottom: 1px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
@@ -134,7 +274,12 @@ const gameHTML = `<!DOCTYPE html>
                 "Pack my box with five dozen liquor jugs.",
                 "How vexingly quick daft zebras jump!",
                 "The five boxing wizards jump quickly.",
-                "Sphinx of black quartz, judge my vow."
+                "Sphinx of black quartz, judge my vow.",
+                "The job requires extra pluck and zeal from every young wage earner.",
+                "Two driven jocks help fax my big quiz.",
+                "Five quacking zephyrs jolt my wax bed.",
+                "The jay, pig, fox, zebra and my wolves quack!",
+                "Watch 'Jeopardy!', Alex Trebek's fun TV quiz game."
             ],
             currentSentence: "",
             startTime: 0,
@@ -154,19 +299,38 @@ const gameHTML = `<!DOCTYPE html>
             botWPM: 30,
 
             init() {
-                // Previous element selections remain the same
                 this.moneyDisplay = document.getElementById('money-display');
                 this.leagueInfo = document.getElementById('league-info');
                 this.leagueProgressBar = document.getElementById('league-progress-bar');
                 this.leagueProgressText = document.getElementById('league-progress-text');
-                
-                // Add all previous element selections here
+                this.sampleText = document.getElementById('sample-text');
+                this.userInput = document.getElementById('user-input');
+                this.startButton = document.getElementById('start-btn');
+                this.wpmDisplay = document.getElementById('wpm');
+                this.timeDisplay = document.getElementById('time');
+                this.accuracyDisplay = document.getElementById('accuracy');
+                this.botInfo = document.getElementById('bot-info');
+                this.raceLog = document.getElementById('race-log');
+                this.playerCar = document.querySelector('.player-car');
+                this.botCar = document.querySelector('.bot-car');
+                this.minimapPlayer = document.querySelector('.minimap-player');
+                this.minimapBot = document.querySelector('.minimap-bot');
                 
                 this.updateLeagueInfo();
                 this.updateMoneyDisplay();
                 this.setBotWPMForLeague();
                 
-                // Previous event listeners remain the same
+                this.startButton.addEventListener('click', () => {
+                    if (!this.gameActive) {
+                        this.startGame();
+                    }
+                });
+
+                this.userInput.addEventListener('input', () => {
+                    if (this.gameActive) {
+                        this.checkProgress();
+                    }
+                });
             },
 
             setBotWPMForLeague() {
@@ -178,6 +342,7 @@ const gameHTML = `<!DOCTYPE html>
                     "Diamond": 90
                 };
                 this.botWPM = leagueWPMBase[this.league.current] + Math.floor(Math.random() * 15);
+                this.botInfo.textContent = `Bot's Target WPM: ${this.botWPM}`;
             },
 
             updateMoneyDisplay() {
@@ -224,10 +389,54 @@ const gameHTML = `<!DOCTYPE html>
             },
 
             startGame() {
-                // Previous startGame logic remains
+                this.gameActive = true;
+                this.currentSentence = this.sentences[Math.floor(Math.random() * this.sentences.length)];
+                this.sampleText.textContent = this.currentSentence;
+                this.userInput.value = '';
+                this.userInput.disabled = false;
+                this.userInput.focus();
+                this.startTime = Date.now();
+                this.startButton.classList.add('disabled');
+                this.playerCar.style.left = '0';
+                this.botCar.style.left = '0';
+                this.minimapPlayer.style.left = '0';
+                this.minimapBot.style.left = '0';
+                
+                this.timerInterval = setInterval(() => {
+                    const timeElapsed = (Date.now() - this.startTime) / 1000;
+                    this.timeDisplay.textContent = Math.round(timeElapsed) + 's';
+                    
+                    // Update bot position
+                    const botProgress = (this.botWPM * timeElapsed / 60) / this.currentSentence.length;
+                    const botPosition = Math.min(botProgress * 100, 100);
+                    this.botCar.style.left = \`\${botPosition}%\`;
+                    this.minimapBot.style.left = \`\${botPosition}%\`;
+                }, 100);
+                
                 this.setBotWPMForLeague();
                 this.updateLeagueInfo();
-                // Continue with previous startGame logic
+            },
+
+            checkProgress() {
+                const timeElapsed = (Date.now() - this.startTime) / 1000;
+                const typed = this.userInput.value;
+                const wordCount = this.currentSentence.split(' ').length;
+                const wpm = this.calculateWPM(timeElapsed, wordCount);
+                const accuracy = this.calculateAccuracy(this.currentSentence, typed);
+                
+                this.wpmDisplay.textContent = wpm;
+                this.accuracyDisplay.textContent = accuracy + '%';
+                
+                // Update player position
+                const progress = typed.length / this.currentSentence.length;
+                const position = Math.min(progress * 100, 100);
+                this.playerCar.style.left = \`\${position}%\`;
+                this.minimapPlayer.style.left = \`\${position}%\`;
+                
+                if (typed === this.currentSentence) {
+                    const playerWon = progress >= 1;
+                    this.endGame(playerWon);
+                }
             },
 
             endGame(playerWon) {
@@ -253,7 +462,12 @@ const gameHTML = `<!DOCTYPE html>
                 this.setBotWPMForLeague();
             },
 
-            // Include all previous methods here
+            addLogEntry(message) {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry';
+                entry.textContent = message;
+                this.raceLog.insertBefore(entry, this.raceLog.firstChild);
+            },
             
             calculateWPM(timeElapsed, wordCount) {
                 const baseWPM = Math.round((wordCount / (timeElapsed / 60)));
