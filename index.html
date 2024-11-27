@@ -1,0 +1,282 @@
+// Create index.html file with the game content
+const gameHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WPM Racing League</title>
+    <style>
+        /* Previous styles remain the same */
+        .league-info {
+            background-color: #6f42c1;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .money-display {
+            background-color: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .league-progress {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #6f42c1;
+            transition: width 0.3s ease;
+        }
+
+        .shop {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .shop-item button {
+            background-color: #007bff;
+            font-size: 0.9em;
+        }
+
+        /* Include all previous styles here */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WPM Racing League</h1>
+        <div class="money-display" id="money-display">
+            Money: $0
+        </div>
+        <div class="league-info" id="league-info">
+            League: Bronze
+        </div>
+        <div class="league-progress">
+            <h3>League Progress</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="league-progress-bar" style="width: 0%"></div>
+            </div>
+            <p id="league-progress-text">0/5 wins needed for promotion</p>
+        </div>
+        <div class="race-track">
+            <div class="car player-car"></div>
+            <div class="car bot-car"></div>
+        </div>
+        <div class="minimap">
+            <div class="minimap-car minimap-player"></div>
+            <div class="minimap-car minimap-bot"></div>
+        </div>
+        <div class="bot-info" id="bot-info">Bot's Target WPM: 0</div>
+        <div class="game-text" id="sample-text"></div>
+        <textarea id="user-input" placeholder="Start typing here..." disabled></textarea>
+        <button id="start-btn">Start Race</button>
+        <div class="stats">
+            <div class="stat-box">
+                <h3>WPM</h3>
+                <div id="wpm">0</div>
+            </div>
+            <div class="stat-box">
+                <h3>Time</h3>
+                <div id="time">0s</div>
+            </div>
+            <div class="stat-box">
+                <h3>Accuracy</h3>
+                <div id="accuracy">0%</div>
+            </div>
+        </div>
+        <div class="shop">
+            <h2>Shop</h2>
+            <div class="shop-item">
+                <span>WPM Boost (+5 base WPM)</span>
+                <button onclick="game.buyUpgrade('wpmBoost', 100)">Buy ($100)</button>
+            </div>
+            <div class="shop-item">
+                <span>Accuracy Boost (+5% accuracy)</span>
+                <button onclick="game.buyUpgrade('accuracyBoost', 150)">Buy ($150)</button>
+            </div>
+        </div>
+        <div class="race-log" id="race-log">
+            <div class="log-entry">Race log will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const game = {
+            sentences: [
+                "The quick brown fox jumps over the lazy dog.",
+                "Pack my box with five dozen liquor jugs.",
+                "How vexingly quick daft zebras jump!",
+                "The five boxing wizards jump quickly.",
+                "Sphinx of black quartz, judge my vow."
+            ],
+            currentSentence: "",
+            startTime: 0,
+            timerInterval: null,
+            gameActive: false,
+            money: 0,
+            league: {
+                current: "Bronze",
+                wins: 0,
+                winsNeeded: 5,
+                levels: ["Bronze", "Silver", "Gold", "Platinum", "Diamond"],
+            },
+            upgrades: {
+                wpmBoost: 0,
+                accuracyBoost: 0
+            },
+            botWPM: 30,
+
+            init() {
+                // Previous element selections remain the same
+                this.moneyDisplay = document.getElementById('money-display');
+                this.leagueInfo = document.getElementById('league-info');
+                this.leagueProgressBar = document.getElementById('league-progress-bar');
+                this.leagueProgressText = document.getElementById('league-progress-text');
+                
+                // Add all previous element selections here
+                
+                this.updateLeagueInfo();
+                this.updateMoneyDisplay();
+                this.setBotWPMForLeague();
+                
+                // Previous event listeners remain the same
+            },
+
+            setBotWPMForLeague() {
+                const leagueWPMBase = {
+                    "Bronze": 30,
+                    "Silver": 45,
+                    "Gold": 60,
+                    "Platinum": 75,
+                    "Diamond": 90
+                };
+                this.botWPM = leagueWPMBase[this.league.current] + Math.floor(Math.random() * 15);
+            },
+
+            updateMoneyDisplay() {
+                this.moneyDisplay.textContent = \`Money: $\${this.money}\`;
+            },
+
+            updateLeagueInfo() {
+                this.leagueInfo.textContent = \`League: \${this.league.current}\`;
+                const progress = (this.league.wins / this.league.winsNeeded) * 100;
+                this.leagueProgressBar.style.width = \`\${progress}%\`;
+                this.leagueProgressText.textContent = 
+                    \`\${this.league.wins}/\${this.league.winsNeeded} wins needed for promotion\`;
+            },
+
+            buyUpgrade(type, cost) {
+                if (this.money >= cost) {
+                    this.money -= cost;
+                    this.upgrades[type]++;
+                    this.updateMoneyDisplay();
+                    this.addLogEntry(\`Purchased \${type} upgrade!\`);
+                } else {
+                    this.addLogEntry("Not enough money for upgrade!");
+                }
+            },
+
+            calculateReward(wpm, accuracy) {
+                const baseReward = 20;
+                const wpmBonus = Math.floor(wpm / 10);
+                const accuracyBonus = Math.floor(accuracy / 10);
+                return baseReward + wpmBonus + accuracyBonus;
+            },
+
+            checkForPromotion() {
+                if (this.league.wins >= this.league.winsNeeded) {
+                    const currentIndex = this.league.levels.indexOf(this.league.current);
+                    if (currentIndex < this.league.levels.length - 1) {
+                        this.league.current = this.league.levels[currentIndex + 1];
+                        this.league.wins = 0;
+                        this.addLogEntry(\`Congratulations! Promoted to \${this.league.current} League!\`);
+                        this.setBotWPMForLeague();
+                    }
+                }
+                this.updateLeagueInfo();
+            },
+
+            startGame() {
+                // Previous startGame logic remains
+                this.setBotWPMForLeague();
+                this.updateLeagueInfo();
+                // Continue with previous startGame logic
+            },
+
+            endGame(playerWon) {
+                this.gameActive = false;
+                clearInterval(this.timerInterval);
+                this.userInput.disabled = true;
+                this.startButton.classList.remove('disabled');
+                this.startButton.textContent = 'Play Again';
+                
+                const finalWPM = parseInt(this.wpmDisplay.textContent);
+                const finalAccuracy = parseInt(this.accuracyDisplay.textContent);
+                
+                if (playerWon) {
+                    const reward = this.calculateReward(finalWPM, finalAccuracy);
+                    this.money += reward;
+                    this.league.wins++;
+                    this.addLogEntry(\`Race won! Earned $\${reward}\`);
+                    this.checkForPromotion();
+                }
+                
+                this.updateMoneyDisplay();
+                this.addLogEntry(\`Race finished! Final WPM: \${finalWPM}, Accuracy: \${finalAccuracy}%\`);
+                this.setBotWPMForLeague();
+            },
+
+            // Include all previous methods here
+            
+            calculateWPM(timeElapsed, wordCount) {
+                const baseWPM = Math.round((wordCount / (timeElapsed / 60)));
+                return baseWPM + (this.upgrades.wpmBoost * 5);
+            },
+
+            calculateAccuracy(original, typed) {
+                if (typed.length === 0) return 0;
+                let correct = 0;
+                for (let i = 0; i < typed.length; i++) {
+                    if (original[i] === typed[i]) correct++;
+                }
+                const baseAccuracy = Math.round((correct / typed.length) * 100);
+                return Math.min(100, baseAccuracy + (this.upgrades.accuracyBoost * 5));
+            }
+        };
+
+        // Initialize the game
+        game.init();
+    </script>
+</body>
+</html>`;
+
+// Write the game HTML directly to index.html in the root directory
+const fs = require('fs');
+fs.writeFileSync('index.html', gameHTML);
